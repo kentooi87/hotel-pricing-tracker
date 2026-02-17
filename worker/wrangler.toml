@@ -2,11 +2,9 @@
 # See https://developers.cloudflare.com/workers/platform/configuration/
 
 name = "hotel-price-tracker-worker"
-type = "javascript"
 account_id = "2084d7f7c042f35730c7dfe7c14ded40"
-workers_dev = true
-route = ""
-zone_id = ""
+compatibility_date = "2026-02-17"
+main = "src/index.js"
 
 # Environment: Development
 [env.development]
@@ -18,8 +16,6 @@ kv_namespaces = [
 
 # Environment: Production
 [env.production]
-route = "https://example.com/worker/*"
-zone_id = ""
 vars = { STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_LIVE_KEY_HERE" }
 kv_namespaces = [
   { binding = "SUBSCRIPTIONS", id = "YOUR_PRODUCTION_KV_ID", preview_id = "YOUR_PROD_PREVIEW_ID" }
