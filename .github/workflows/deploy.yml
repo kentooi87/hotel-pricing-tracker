@@ -28,7 +28,7 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         working-directory: ./worker
-        run: npm ci
+        run: npm install
       
       # Step 4: Deploy to Cloudflare
       - name: Deploy to Cloudflare Workers
