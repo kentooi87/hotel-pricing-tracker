@@ -5,7 +5,7 @@
 ### 1. Enable Extension in Incognito Mode
 For the extension to work properly with auto-refresh:
 1. Open Chrome and go to `chrome://extensions/`
-2. Find "Booking & Airbnb Price Tracker"
+2. Find "LyfStay Hotel Price Tracker"
 3. Click "Details"
 4. Scroll down and **enable "Allow in Incognito"**
 5. Reload the extension
@@ -15,7 +15,7 @@ For the extension to work properly with auto-refresh:
 #### Background Service Worker Logs:
 1. Go to `chrome://extensions/`
 2. Enable "Developer mode" (top right)
-3. Find "Booking & Airbnb Price Tracker"
+3. Find "LyfStay Hotel Price Tracker"
 4. Click "Service Worker" or "Inspect views: background page"
 5. Look for logs starting with "Booking Tracker:"
 

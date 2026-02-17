@@ -245,7 +245,7 @@
 - Unified interface for Booking.com, Airbnb, and Agoda
 
 ### Improvements
-- Updated extension name to "Hotel Price Tracker (Booking, Airbnb, Agoda)"
+- Updated extension name to "LyfStay Hotel Price Tracker"
 - Enhanced site detection to recognize Agoda URLs
 - Improved "Track by URL" to accept Agoda links
 - Added Agoda-specific date parameter handling

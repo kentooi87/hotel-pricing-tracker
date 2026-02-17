@@ -1,7 +1,7 @@
 # Version 3.3.0 Release Summary
 
 ## Overview
-Successfully added **Agoda** support to the Hotel Price Tracker extension, expanding coverage to three major booking platforms.
+Successfully added **Agoda** support to the LyfStay Hotel Price Tracker extension, expanding coverage to three major booking platforms.
 
 ## What Was Added
 
@@ -14,7 +14,7 @@ Successfully added **Agoda** support to the Hotel Price Tracker extension, expan
 
 ### Modified Files
 - **manifest.json**
-  - Updated extension name to "Hotel Price Tracker (Booking, Airbnb, Agoda)"
+  - Updated extension name to "LyfStay Hotel Price Tracker"
   - Added Agoda host permissions (*.agoda.com)
   - Added Agoda content script configuration
   - Version bumped to 3.3.0

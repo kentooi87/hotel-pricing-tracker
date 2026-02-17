@@ -1,6 +1,6 @@
 # Deployment Guide - Going Live
 
-This guide covers deploying your Hotel Price Tracker to production so real users can pay and use it.
+This guide covers deploying your LyfStay Hotel Price Tracker to production so real users can pay and use it.
 
 ## Deployment Checklist
 
@@ -224,7 +224,7 @@ After uploading, you'll see a form:
 
 2. **Full description**:
    ```
-   Hotel Price Tracker Pro helps you monitor and compare hotel prices 
+   LyfStay Hotel Price Tracker Pro helps you monitor and compare hotel prices 
    across the three major booking platforms:
    
    Features:
@@ -265,7 +265,7 @@ After uploading, you'll see a form:
 10. **Privacy Policy** (REQUIRED):
     - Create a simple privacy policy:
     ```
-    Privacy Policy for Hotel Price Tracker
+   Privacy Policy for LyfStay Hotel Price Tracker
     
     We respect your privacy. Our extension:
     - Does not collect personal data

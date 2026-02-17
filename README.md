@@ -1,4 +1,4 @@
-# Hotel Price Tracker Extension
+# LyfStay Hotel Price Tracker Extension
 
 Track and compare hotel prices across **Booking.com**, **Airbnb**, and **Agoda** with automatic price monitoring and change notifications.
 

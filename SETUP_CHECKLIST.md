@@ -1,4 +1,4 @@
-# Complete Setup Checklist - Hotel Price Tracker Monetization
+# Complete Setup Checklist - LyfStay Hotel Price Tracker Monetization
 
 Print this out or save it - check off items as you complete them!
 
@@ -29,7 +29,7 @@ Print this out or save it - check off items as you complete them!
 - [ ] Enter email, password, country, timezone
 - [ ] Check verification email and click link
 - [ ] Fill in account details:
-  - [ ] Business name: "Hotel Price Tracker" or your name
+  - [ ] Business name: "LyfStay Hotel Price Tracker" or your name
   - [ ] Business type: "Other"
   - [ ] Personal info (name, DOB, phone)
   - [ ] Address
@@ -46,7 +46,7 @@ Print this out or save it - check off items as you complete them!
 
 ### 2.3: Create Product
 - [ ] Products → Add product
-- [ ] Name: "Hotel Price Tracker Pro"
+- [ ] Name: "LyfStay Hotel Price Tracker Pro"
 - [ ] Make it recurring (monthly)
 - [ ] Price: $9.99
 - [ ] Save product
@@ -459,7 +459,7 @@ Last updated: January 2024
 
 ### 11.3: Fill Store Listing
 Fill in all required fields:
-- [ ] **Title**: "Hotel Price Tracker"
+- [ ] **Title**: "LyfStay Hotel Price Tracker"
 - [ ] **Short description**: (from Phase 10.3)
 - [ ] **Full description**: (from Phase 10.3)
 - [ ] **Category**: "Productivity" or "Shopping"
@@ -597,7 +597,7 @@ Count how many checkboxes you've completed:
 ## 🎯 YOU'RE DONE!
 
 Once you've checked all boxes, you have:
-- ✅ Production-ready Hotel Price Tracker
+- ✅ Production-ready LyfStay Hotel Price Tracker
 - ✅ Stripe payment integration
 - ✅ Cloudflare backend
 - ✅ Published on Chrome Web Store

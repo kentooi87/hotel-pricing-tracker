@@ -1,6 +1,6 @@
-# Stripe Setup Guide for Hotel Price Tracker
+# Stripe Setup Guide for LyfStay Hotel Price Tracker
 
-This guide walks you through setting up Stripe to accept payments for your Hotel Price Tracker extension. **Read each step carefully - we'll take screenshots and screenshots of what you should see.**
+This guide walks you through setting up Stripe to accept payments for your LyfStay Hotel Price Tracker extension. **Read each step carefully - we'll take screenshots and screenshots of what you should see.**
 
 ## Table of Contents
 1. [Create Stripe Account](#create-stripe-account)
@@ -26,7 +26,7 @@ This guide walks you through setting up Stripe to accept payments for your Hotel
 4. Click **"Sign up"** button
 5. Stripe will send you a verification email - check your email and click the verification link
 6. You'll be taken to account setup - fill in:
-   - **Business name**: "Hotel Price Tracker" or your company name
+   - **Business name**: "LyfStay Hotel Price Tracker" or your company name
    - **Website**: Leave blank or enter your website if you have one
    - **Business type**: Select "Other"
 
@@ -76,12 +76,12 @@ Later when we set up webhooks, you'll get another secret for webhook verificatio
 
 ### Step 3.1: Create a Product
 
-A "Product" in Stripe is what you're selling - in our case, "Hotel Price Tracker Pro".
+A "Product" in Stripe is what you're selling - in our case, "LyfStay Hotel Price Tracker Pro".
 
 1. In Stripe Dashboard, click **"Products"** on the left sidebar
 2. Click **"Add product"** button (blue button, top right)
 3. Fill in the details:
-   - **Product name**: `Hotel Price Tracker Pro`
+   - **Product name**: `LyfStay Hotel Price Tracker Pro`
    - **Description**: "Premium subscription for unlimited hotel tracking and advanced features"
    - **Image**: (optional) Upload an extension icon
 4. Under **"Pricing"**, select **"Recurring"** (for monthly subscription)

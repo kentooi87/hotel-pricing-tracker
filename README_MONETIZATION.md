@@ -1,6 +1,6 @@
-# Hotel Price Tracker - Monetization Setup Guide
+# LyfStay Hotel Price Tracker - Monetization Setup Guide
 
-Welcome! This guide helps you transform your Hotel Price Tracker extension into a paid subscription service. You don't need any backend experience - we've built everything for you.
+Welcome! This guide helps you transform your LyfStay Hotel Price Tracker extension into a paid subscription service. You don't need any backend experience - we've built everything for you.
 
 ## What We're Building
 
@@ -48,7 +48,7 @@ Your extension will have:
 Go to: https://stripe.com/en-gb
 1. Sign up for account
 2. Get Test API keys
-3. Create Product "Hotel Price Tracker Pro" ($9.99/month)
+3. Create Product "LyfStay Hotel Price Tracker Pro" ($9.99/month)
 4. Set up Webhook endpoint
 → See: docs/STRIPE_SETUP.md for detailed steps
 ```
