@@ -59,7 +59,7 @@ async function checkSubscription() {
 			// Fetch fresh subscription status
 			try {
 				const userId = await getUserId();
-				const workerUrl = 'https://your-worker-name.your-subdomain.workers.dev';
+				const workerUrl = 'https://hotel-price-tracker-worker.kent-ooi1987.workers.dev';
 				
 				const response = await fetch(`${workerUrl}/verify/${userId}`, {
 					method: 'GET',

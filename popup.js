@@ -38,7 +38,7 @@ async function checkSubscriptionStatus() {
 	try {
 		const userId = await getUserId();
 		// Replace YOUR_WORKER_URL with your actual Cloudflare Worker URL
-		const workerUrl = 'https://your-worker-name.your-subdomain.workers.dev';
+		const workerUrl = 'https://hotel-price-tracker-worker.kent-ooi1987.workers.dev';
 		
 		const response = await fetch(`${workerUrl}/verify/${userId}`, {
 			method: 'GET',
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		upgradeBtn.addEventListener('click', async () => {
 			try {
 				const userId = await getUserId();
-				const workerUrl = 'https://your-worker-name.your-subdomain.workers.dev';
+				const workerUrl = 'https://hotel-price-tracker-worker.kent-ooi1987.workers.dev';
 				const returnUrl = chrome.runtime.getURL('popup.html');
 				
 				const response = await fetch(`${workerUrl}/checkout`, {
