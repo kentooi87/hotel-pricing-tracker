@@ -1,0 +1,51 @@
+name: Deploy Worker to Cloudflare
+
+# Trigger this workflow when code is pushed to main branch
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'worker/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Check out the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      # Step 2: Set up Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        working-directory: ./worker
+        run: npm ci
+      
+      # Step 4: Deploy to Cloudflare
+      - name: Deploy to Cloudflare Workers
+        working-directory: ./worker
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+      
+      # Step 5: Notify on success
+      - name: Deployment Success
+        if: success()
+        run: echo "✅ Worker deployed successfully to Cloudflare!"
+      
+      # Step 6: Notify on failure
+      - name: Deployment Failed
+        if: failure()
+        run: echo "❌ Worker deployment failed. Check logs above for details."

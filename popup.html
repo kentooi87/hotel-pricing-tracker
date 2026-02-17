@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hotel Tracker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 380px;
+      padding: 0;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100%;
+    }
+    .header {
+      background: linear-gradient(135deg, #003580 0%, #0057b8 100%);
+      color: white;
+      padding: 15px 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    .header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .header .subtitle {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-top: 4px;
+    }
+    .main-content {
+      background: #f8f9fa;
+      padding: 15px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #003580;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 14px;
+      background: linear-gradient(135deg, #003580 0%, #0057b8 100%);
+      border-radius: 2px;
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .input-wrapper {
+      flex: 1;
+    }
+    .input-wrapper label {
+      display: block;
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .input-wrapper input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      background: #fafafa;
+    }
+    .input-wrapper input:focus {
+      outline: none;
+      border-color: #003580;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(0,53,128,0.1);
+    }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #003580 0%, #0057b8 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,53,128,0.3);
+    }
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+    }
+    .btn-success:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-group .btn {
+      flex: 1;
+      min-width: 100px;
+    }
+    .btn-full {
+      width: 100%;
+    }
+    #feedback {
+      min-height: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    #feedback.show {
+      display: block;
+    }
+    #feedback.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    #feedback.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin: 15px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .count {
+      background: #003580;
+      color: white;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .site-tabs {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+    .site-tab {
+      flex: 1;
+      text-align: center;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1.5px solid #e0e0e0;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      color: #444;
+      transition: all 0.2s ease;
+    }
+    .site-tab.active {
+      border-color: #003580;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      color: #003580;
+      background: #e8f4ff;
+    }
+    .hotel {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 15px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid #003580;
+    }
+    .hotel-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+    .hotel-meta {
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    .hotel-meta a {
+      color: #003580;
+      text-decoration: none;
+    }
+    .hotel-meta a:hover {
+      text-decoration: underline;
+    }
+    .room-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      font-size: 11px;
+      border-radius: 8px;
+      overflow: hidden;
+      table-layout: fixed;
+    }
+    .room-table th, .room-table td {
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .room-table th {
+      background: linear-gradient(135deg, #003580 0%, #0057b8 100%);
+      color: white;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .room-table tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .room-table tbody tr:last-child {
+      border-bottom: none;
+    }
+    .room-table tbody tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
+    .room-table tbody tr:hover {
+      background-color: #e8f4ff;
+    }
+    .room-table td.price {
+      font-weight: 700;
+      color: #28a745;
+      white-space: nowrap;
+      width: 65px;
+    }
+    .room-cell, .cond-cell {
+      overflow: hidden;
+    }
+    .cell-text {
+      display: block;
+      line-height: 1.4;
+    }
+    .cell-text.collapsed {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+    .expand-cell {
+      width: 35px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .expand-btn {
+      color: #003580;
+      font-size: 9px;
+      cursor: pointer;
+      display: inline-block;
+      padding: 3px 6px;
+      background: #e8f4ff;
+      border-radius: 4px;
+      font-weight: 600;
+      border: none;
+      white-space: nowrap;
+    }
+    .expand-btn:hover {
+      background: #d0e8ff;
+    }
+    .condition-free {
+      color: #155724;
+      background: #d4edda;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+    .condition-nonrefund {
+      color: #721c24;
+      background: #f8d7da;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+    .condition-flexible {
+      color: #0c5460;
+      background: #d1ecf1;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+    .condition-standard {
+      color: #666;
+      background: #e9ecef;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 600;
+    }
+    .price-down {
+      color: #155724;
+      font-weight: 700;
+      background: #d4edda;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+    }
+    .price-up {
+      color: #721c24;
+      font-weight: 700;
+      background: #f8d7da;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+    }
+    .no-change {
+      color: #999;
+      font-size: 10px;
+    }
+    .btn-remove {
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      color: #666;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-remove:hover {
+      background: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+    #priceChangeNotifications {
+      display: none;
+      background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .notif-header {
+      font-size: 12px;
+      font-weight: 600;
+      color: #856404;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(133,100,4,0.2);
+    }
+    .price-change-item {
+      background: white;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      border-left: 4px solid #888;
+      font-size: 11px;
+    }
+    .price-change-item.down {
+      border-left-color: #28a745;
+    }
+    .price-change-item.up {
+      border-left-color: #dc3545;
+    }
+    .change-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 9px;
+      font-weight: 700;
+    }
+    .change-badge.down {
+      background: #d4edda;
+      color: #155724;
+    }
+    .change-badge.up {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .old-price {
+      text-decoration: line-through;
+      color: #888;
+    }
+    .new-price {
+      font-weight: 700;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 30px 20px;
+      color: #666;
+    }
+    .empty-state .icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    .empty-state p {
+      font-size: 12px;
+      margin: 0;
+    }
+    .upgrade-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      display: none;
+      margin: 10px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+    }
+    .upgrade-banner.show {
+      display: block;
+    }
+    .upgrade-banner h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .upgrade-banner p {
+      margin: 0 0 12px 0;
+      font-size: 12px;
+      opacity: 0.95;
+    }
+    .upgrade-banner .btn-upgrade {
+      background: white;
+      color: #667eea;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .upgrade-banner .btn-upgrade:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>🏨 Hotel Price Tracker</h2>
+    <div class="subtitle">Track & compare hotel prices</div>
+  </div>
+
+  <div id="upgradeBanner" class="upgrade-banner">
+    <h3>🚀 Unlock Premium Features</h3>
+    <p>Get unlimited tracking and advanced analytics for only $9.99/month</p>
+    <button class="btn-upgrade" id="upgradeBtn">Upgrade Now</button>
+  </div>
+
+  <div class="main-content">
+    <div class="site-tabs">
+      <div class="site-tab active" data-site="booking">Booking</div>
+      <div class="site-tab" data-site="airbnb">Airbnb</div>
+      <div class="site-tab" data-site="agoda">Agoda</div>
+    </div>
+
+    <!-- Dates Card -->
+    <div class="card">
+      <div class="card-title">📅 Travel Dates</div>
+      <div class="input-group">
+        <div class="input-wrapper">
+          <label>Check-in</label>
+          <input type="date" id="checkinInput">
+        </div>
+        <div class="input-wrapper">
+          <label>Check-out</label>
+          <input type="date" id="checkoutInput">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" id="setDateBtn">Set Dates</button>
+    </div>
+
+    <!-- Auto Refresh Card -->
+    <div class="card">
+      <div class="card-title">⏰ Auto Refresh</div>
+      <div class="input-group">
+        <div class="input-wrapper" style="flex: 2;">
+          <label>Interval (minutes)</label>
+          <input type="number" id="intervalInput" min="1" placeholder="e.g. 30">
+        </div>
+        <div style="flex: 1; display: flex; align-items: flex-end;">
+          <button class="btn btn-secondary btn-full" id="setIntervalBtn">Set</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="card">
+      <div class="card-title">⚡ Quick Actions</div>
+      <div class="btn-group" style="margin-bottom: 8px;">
+        <button class="btn btn-success" id="trackBtn">➕ Track Hotel</button>
+        <button class="btn btn-primary" id="refreshBtn">🔄 Refresh</button>
+      </div>
+      <button class="btn btn-secondary btn-full" id="openAllBtn">🔗 Open All Hotels</button>
+    </div>
+
+    <!-- Track by URL Card -->
+    <div class="card">
+      <div class="card-title">🔗 Track by URL</div>
+      <div class="input-wrapper" style="margin-bottom: 8px;">
+        <label>Paste hotel URL (Booking.com, Airbnb, or Agoda)</label>
+        <input type="url" id="hotelUrlInput" placeholder="https://www.booking.com/hotel/... or Airbnb or Agoda URL">
+      </div>
+      <button class="btn btn-success btn-full" id="trackUrlBtn">📥 Track from URL</button>
+    </div>
+
+    <div id="feedback"></div>
+
+    <div id="priceChangeNotifications"></div>
+
+    <div class="section-title">
+      📋 Tracked Hotels <span class="count" id="hotelCount">0</span>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
