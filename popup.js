@@ -78,6 +78,9 @@ function updateLoginUI(loggedIn, email) {
 		loginBtn.style.display = 'inline-block';
 		logoutBtn.style.display = 'none';
 		setMainLocked(true);
+		// Hide account card when logged out
+		const card = document.getElementById('accountCard');
+		if (card) card.classList.remove('show');
 	}
 }
 
@@ -120,7 +123,15 @@ async function checkSubscriptionStatus() {
 		}
 		
 		const data = await response.json();
-		return { subscribed: data.subscribed || false, tier: data.tier || 'free' };
+		return {
+			subscribed: data.subscribed || false,
+			tier: data.tier || 'free',
+			amount: data.amount || null,
+			currency: data.currency || 'usd',
+			startDate: data.startDate || null,
+			nextChargeDate: data.nextChargeDate || null,
+			subscriptionId: data.subscriptionId || null,
+		};
 	} catch (error) {
 		console.error('Error checking subscription:', error);
 		return { subscribed: false, tier: 'free' };
@@ -138,6 +149,9 @@ async function updateUpgradeBanner() {
 	currentTier = status.tier || 'free';
 	chrome.storage.local.set({ subscriptionTier: currentTier });
 
+	// Update account card
+	updateAccountCard(status);
+
 	if (currentTier === 'pro') {
 		banner.classList.remove('show');
 		return;
@@ -151,6 +165,73 @@ async function updateUpgradeBanner() {
 	}
 	if (planSelect) {
 		planSelect.value = currentTier === 'starter' ? 'pro' : 'starter';
+	}
+}
+
+const TIER_DESCRIPTIONS = {
+	free: 'Free plan: Track up to 3 hotels on Booking.com only.',
+	starter: 'Starter plan: Track up to 10 hotels on Booking.com and Agoda.',
+	pro: 'Pro plan: Unlimited hotel tracking across Booking.com, Agoda, and Airbnb.'
+};
+
+const TIER_PRICES = { starter: '$4.99', pro: '$9.99' };
+
+function formatDate(iso) {
+	if (!iso) return '\u2014';
+	const d = new Date(iso);
+	return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function updateAccountCard(status) {
+	const card = document.getElementById('accountCard');
+	if (!card) return;
+
+	// Only show when logged in
+	if (!isLoggedIn) { card.classList.remove('show'); return; }
+	card.classList.add('show');
+
+	const tier = status.tier || 'free';
+
+	// Avatar & email
+	getAuthInfo().then(auth => {
+		const email = auth.authEmail || '';
+		const avatar = document.getElementById('accountAvatar');
+		const nameEl = document.getElementById('accountName');
+		const emailEl = document.getElementById('accountEmail');
+		if (avatar) avatar.textContent = email ? email.charAt(0).toUpperCase() : '?';
+		if (nameEl) nameEl.textContent = email.split('@')[0] || '\u2014';
+		if (emailEl) emailEl.textContent = email || '\u2014';
+	});
+
+	// Tier badge
+	const badge = document.getElementById('accountTierBadge');
+	if (badge) {
+		badge.className = 'tier-badge ' + tier;
+		badge.textContent = tier.toUpperCase();
+	}
+
+	// Tier description
+	const desc = document.getElementById('accountTierDesc');
+	if (desc) desc.textContent = TIER_DESCRIPTIONS[tier] || TIER_DESCRIPTIONS.free;
+
+	// Subscription details (paid plans only)
+	const details = document.getElementById('accountDetails');
+	const cancelBtn = document.getElementById('cancelSubBtn');
+
+	if (status.subscribed && (tier === 'starter' || tier === 'pro')) {
+		if (details) {
+			details.style.display = 'block';
+			const costEl = document.getElementById('accountCost');
+			const startEl = document.getElementById('accountStartDate');
+			const nextEl = document.getElementById('accountNextCharge');
+			if (costEl) costEl.textContent = `${TIER_PRICES[tier] || '\u2014'}/month`;
+			if (startEl) startEl.textContent = formatDate(status.startDate);
+			if (nextEl) nextEl.textContent = formatDate(status.nextChargeDate);
+		}
+		if (cancelBtn) cancelBtn.style.display = 'inline-block';
+	} else {
+		if (details) details.style.display = 'none';
+		if (cancelBtn) cancelBtn.style.display = 'none';
 	}
 }
 
@@ -277,6 +358,43 @@ document.addEventListener('DOMContentLoaded', () => {
 			} catch (error) {
 				console.error('Error starting checkout:', error);
 				showFeedback('Error opening checkout page', true);
+			}
+		});
+	}
+
+	// Cancel subscription button
+	const cancelSubBtn = document.getElementById('cancelSubBtn');
+	if (cancelSubBtn) {
+		cancelSubBtn.addEventListener('click', async () => {
+			if (!confirm('Are you sure you want to cancel your subscription? You will lose access to premium features immediately.')) {
+				return;
+			}
+			try {
+				cancelSubBtn.disabled = true;
+				cancelSubBtn.textContent = 'Cancelling...';
+				const userId = await getUserId();
+				const response = await fetch(`${WORKER_URL}/cancel-subscription`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ userId: userId })
+				});
+				if (!response.ok) {
+					showFeedback('Failed to cancel subscription. Please try again.', true);
+					return;
+				}
+				const data = await response.json();
+				if (data.cancelled) {
+					currentTier = 'free';
+					chrome.storage.local.set({ subscriptionTier: 'free', subscriptionStatus: false });
+					showFeedback('Subscription cancelled. You are now on the Free plan.');
+					await updateUpgradeBanner();
+				}
+			} catch (error) {
+				console.error('Cancel error:', error);
+				showFeedback('Error cancelling subscription.', true);
+			} finally {
+				cancelSubBtn.disabled = false;
+				cancelSubBtn.textContent = 'Cancel Subscription';
 			}
 		});
 	}

@@ -62,6 +62,11 @@ export default {
         return handleCancel();
       }
 
+      // Route: POST /cancel-subscription - Cancel subscription
+      if (path === '/cancel-subscription' && request.method === 'POST') {
+        return await handleCancelSubscription(request, env, corsHeaders);
+      }
+
       // Route: GET /status - Health check
       if (path === '/status' && request.method === 'GET') {
         return new Response(JSON.stringify({ status: 'ok' }), {
@@ -196,6 +201,8 @@ async function handleWebhook(request, env, corsHeaders) {
     const session = event.data.object;
     const userId = session.metadata?.userId || session.client_reference_id;
     const tier = session.metadata?.tier || 'pro';
+    const subscriptionId = session.subscription;
+    const amount = tier === 'starter' ? 499 : 999;
 
     if (userId) {
       await env.SUBSCRIPTIONS.put(
@@ -204,6 +211,11 @@ async function handleWebhook(request, env, corsHeaders) {
           subscribed: true,
           tier: tier,
           sessionId: session.id,
+          subscriptionId: subscriptionId || null,
+          amount: amount,
+          currency: 'usd',
+          startDate: new Date().toISOString(),
+          nextChargeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         }),
@@ -223,13 +235,24 @@ async function handleWebhook(request, env, corsHeaders) {
     const tier = charge.metadata?.tier || 'pro';
 
     if (userId) {
+      // Merge with existing data if available
+      let existing = {};
+      try {
+        const raw = await env.SUBSCRIPTIONS.get(`user:${userId}`);
+        if (raw) existing = JSON.parse(raw);
+      } catch (e) { /* ignore */ }
+
       await env.SUBSCRIPTIONS.put(
         `user:${userId}`,
         JSON.stringify({
+          ...existing,
           subscribed: true,
           tier: tier,
           chargeId: charge.id,
-          createdAt: new Date().toISOString(),
+          amount: charge.amount || existing.amount,
+          currency: charge.currency || existing.currency || 'usd',
+          createdAt: existing.createdAt || new Date().toISOString(),
+          nextChargeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         }),
         {
@@ -253,7 +276,7 @@ async function handleWebhook(request, env, corsHeaders) {
  */
 async function handleVerify(userId, env, corsHeaders) {
   if (!userId) {
-    return new Response(JSON.stringify({ subscribed: false }), {
+    return new Response(JSON.stringify({ subscribed: false, tier: 'free' }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
@@ -267,7 +290,15 @@ async function handleVerify(userId, env, corsHeaders) {
     const isActive = expiresAt > new Date();
     const tier = data.tier || (isActive ? 'starter' : 'free');
 
-    return new Response(JSON.stringify({ subscribed: isActive, tier: tier }), {
+    return new Response(JSON.stringify({
+      subscribed: isActive,
+      tier: isActive ? tier : 'free',
+      amount: data.amount || null,
+      currency: data.currency || 'usd',
+      startDate: data.startDate || data.createdAt || null,
+      nextChargeDate: data.nextChargeDate || null,
+      subscriptionId: data.subscriptionId || null,
+    }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
@@ -295,12 +326,19 @@ async function handleSuccess(url, env) {
       tier = session.metadata?.tier || 'pro';
 
       if (userId && session.payment_status === 'paid') {
+        const subscriptionId = session.subscription;
+        const amount = tier === 'starter' ? 499 : 999;
         await env.SUBSCRIPTIONS.put(
           `user:${userId}`,
           JSON.stringify({
             subscribed: true,
             tier: tier,
             sessionId: session.id,
+            subscriptionId: subscriptionId || null,
+            amount: amount,
+            currency: 'usd',
+            startDate: new Date().toISOString(),
+            nextChargeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           }),
@@ -345,6 +383,61 @@ async function handleSuccess(url, env) {
 </div></body></html>`;
 
   return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+}
+
+/**
+ * Handle POST /cancel-subscription
+ * Cancels an active Stripe subscription
+ */
+async function handleCancelSubscription(request, env, corsHeaders) {
+  try {
+    const body = await request.json();
+    const userId = body.userId;
+
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'userId is required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Lookup subscription data
+    const subscriptionData = await env.SUBSCRIPTIONS.get(`user:${userId}`);
+    if (!subscriptionData) {
+      return new Response(JSON.stringify({ error: 'No subscription found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    const data = JSON.parse(subscriptionData);
+    const subscriptionId = data.subscriptionId;
+
+    if (subscriptionId && env.STRIPE_SECRET_KEY) {
+      // Cancel via Stripe API
+      const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+      try {
+        await stripe.subscriptions.cancel(subscriptionId);
+        console.log(`Stripe subscription ${subscriptionId} cancelled for user ${userId}`);
+      } catch (stripeErr) {
+        console.error('Stripe cancel error:', stripeErr.message);
+        // Continue to remove from KV even if Stripe fails
+      }
+    }
+
+    // Remove subscription from KV
+    await env.SUBSCRIPTIONS.delete(`user:${userId}`);
+
+    return new Response(JSON.stringify({ cancelled: true }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (error) {
+    console.error('Cancel subscription error:', error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
 }
 
 /**

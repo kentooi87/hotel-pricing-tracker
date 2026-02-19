@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Hotel Tracker</title>
+  <title>LyfStay Hotel Price Tracker</title>
   <style>
     * {
       box-sizing: border-box;
@@ -438,16 +438,219 @@
       font-size: 12px;
       margin: 0;
     }
+    .upgrade-banner {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      text-align: center;
+      display: none;
+      margin: 10px 15px 0;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+    }
+    .upgrade-banner.show {
+      display: block;
+    }
+    .upgrade-banner h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .upgrade-banner p {
+      margin: 0 0 12px 0;
+      font-size: 12px;
+      opacity: 0.95;
+    }
+    .upgrade-banner .btn-upgrade {
+      background: white;
+      color: #667eea;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .upgrade-banner .btn-upgrade:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .login-banner {
+      background: #ffffff;
+      color: #333;
+      padding: 12px 15px;
+      text-align: center;
+      display: none;
+      margin: 10px 15px 0;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1px solid #e6e6e6;
+    }
+    .login-banner.show {
+      display: block;
+    }
+    .login-banner p {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+    }
+    .login-banner .btn-login {
+      background: linear-gradient(135deg, #003580 0%, #0057b8 100%);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+    .login-banner .btn-login:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,53,128,0.3);
+    }
+    .login-banner .btn-logout {
+      background: #f0f0f0;
+      color: #333;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    .locked {
+      opacity: 0.55;
+      pointer-events: none;
+      filter: grayscale(0.15);
+    }
+    .plan-select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+    /* Account Profile */
+    .account-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin: 10px 15px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      display: none;
+    }
+    .account-card.show { display: block; }
+    .account-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .account-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg,#003580,#0057b8);
+      color:#fff; font-weight:700; font-size:15px;
+      display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .account-name { font-size:13px; font-weight:600; color:#333; }
+    .account-email { font-size:11px; color:#888; }
+    .tier-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tier-badge.free { background:#e9ecef; color:#495057; }
+    .tier-badge.starter { background:#dbeafe; color:#1d4ed8; }
+    .tier-badge.pro { background:linear-gradient(135deg,#fef3c7,#fde68a); color:#92400e; }
+    .account-details {
+      background:#f8f9fa;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+    .account-details .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      color: #555;
+    }
+    .account-details .detail-row .label { color:#888; font-size:11px; }
+    .account-details .detail-row .value { font-weight:600; color:#333; font-size:11px; }
+    .tier-desc {
+      font-size: 11px;
+      color: #666;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .btn-cancel-sub {
+      background: none;
+      border: 1px solid #dc3545;
+      color: #dc3545;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s;
+    }
+    .btn-cancel-sub:hover {
+      background:#dc3545; color:#fff;
+    }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h2>🏨 Hotel Price Tracker</h2>
+    <h2>🏨 LyfStay Hotel Price Tracker</h2>
     <div class="subtitle">Track & compare hotel prices</div>
   </div>
 
-  <div class="main-content">
+  <div id="loginBanner" class="login-banner">
+    <p id="loginStatus">Sign in with Google to use the tracker.</p>
+    <button class="btn-login" id="loginBtn">Sign in with Google</button>
+    <button class="btn-logout" id="logoutBtn" style="display:none;">Sign out</button>
+  </div>
+
+  <!-- Account Profile -->
+  <div id="accountCard" class="account-card">
+    <div class="account-header">
+      <div class="account-avatar" id="accountAvatar">?</div>
+      <div>
+        <div class="account-name" id="accountName">—</div>
+        <div class="account-email" id="accountEmail">—</div>
+      </div>
+      <span class="tier-badge free" id="accountTierBadge" style="margin-left:auto;">FREE</span>
+    </div>
+    <div class="tier-desc" id="accountTierDesc"></div>
+    <div class="account-details" id="accountDetails" style="display:none;">
+      <div class="detail-row"><span class="label">Monthly cost</span><span class="value" id="accountCost">—</span></div>
+      <div class="detail-row"><span class="label">Started</span><span class="value" id="accountStartDate">—</span></div>
+      <div class="detail-row"><span class="label">Next charge</span><span class="value" id="accountNextCharge">—</span></div>
+    </div>
+    <button class="btn-cancel-sub" id="cancelSubBtn" style="display:none;">Cancel Subscription</button>
+  </div>
+
+  <div id="upgradeBanner" class="upgrade-banner">
+    <h3>🚀 Unlock Premium Features</h3>
+    <p id="tierStatus">Choose your plan to unlock more OTAs and hotel slots.</p>
+    <select class="plan-select" id="planSelect">
+      <option value="starter">Starter: Booking + Agoda (10 hotels) - $4.99/mo</option>
+      <option value="pro">Pro: All OTAs (Unlimited) - $9.99/mo</option>
+    </select>
+    <button class="btn-upgrade" id="upgradeBtn">Upgrade Now</button>
+  </div>
+
+  <div class="main-content" id="mainContent">
     <div class="site-tabs">
       <div class="site-tab active" data-site="booking">Booking</div>
       <div class="site-tab" data-site="airbnb">Airbnb</div>
