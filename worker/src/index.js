@@ -14,7 +14,8 @@ import Stripe from 'stripe';
  * Environment variables (set in wrangler.toml)
  * STRIPE_SECRET_KEY - kept in secrets, passed at runtime
  * STRIPE_WEBHOOK_SECRET - kept in secrets, passed at runtime
- * STRIPE_PRICE_ID - your price ID from Stripe
+ * STRIPE_STARTER_PRICE_ID - starter tier price ID from Stripe
+ * STRIPE_PRO_PRICE_ID - pro tier price ID from Stripe
  */
 
 export default {
@@ -81,6 +82,8 @@ async function handleCheckout(request, env, corsHeaders) {
   const body = await request.json();
   const userId = body.userId; // Unique ID for this browser/user
   const returnUrl = body.returnUrl; // Where to redirect after payment
+  const requestedTier = body.tier || 'pro';
+  const tier = requestedTier === 'starter' ? 'starter' : (requestedTier === 'pro' ? 'pro' : null);
 
   if (!userId) {
     return new Response(JSON.stringify({ error: 'userId is required' }), {
@@ -89,20 +92,42 @@ async function handleCheckout(request, env, corsHeaders) {
     });
   }
 
-  // Initialize Stripe with secret key from environment
-  const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20', // Latest API version
-    httpClient: fetch,
-  });
+  if (!tier) {
+    return new Response(JSON.stringify({ error: 'Invalid tier' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  const priceId = tier === 'starter' ? env.STRIPE_STARTER_PRICE_ID : env.STRIPE_PRO_PRICE_ID;
+  if (!priceId) {
+    return new Response(JSON.stringify({ error: 'Invalid pricing configuration' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+
+  if (!env.STRIPE_SECRET_KEY) {
+    return new Response(JSON.stringify({ error: 'Stripe secret key not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
 
   try {
+    // Initialize Stripe with secret key from environment
+    // Stripe SDK v15+ uses fetch by default in CF Workers
+    const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-06-20',
+    });
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [
         {
-          price: env.STRIPE_PRICE_ID, // Your product price ID
+          price: priceId, // Tier price ID
           quantity: 1,
         },
       ],
@@ -111,6 +136,7 @@ async function handleCheckout(request, env, corsHeaders) {
       client_reference_id: userId, // Link session to user
       metadata: {
         userId: userId, // Store in metadata too
+        tier: tier
       },
     });
 
@@ -156,29 +182,53 @@ async function handleWebhook(request, env, corsHeaders) {
   // Parse event
   const event = JSON.parse(body);
 
-  // Only handle charge.succeeded events
-  if (event.type === 'charge.succeeded') {
-    const charge = event.data.object;
-    
-    // Get user ID from metadata
-    const userId = charge.metadata?.userId || charge.customer;
+  // Prefer checkout.session.completed for subscription metadata
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const userId = session.metadata?.userId || session.client_reference_id;
+    const tier = session.metadata?.tier || 'pro';
 
     if (userId) {
-      // Store subscription in KV with 30-day expiry
       await env.SUBSCRIPTIONS.put(
         `user:${userId}`,
         JSON.stringify({
           subscribed: true,
+          tier: tier,
+          sessionId: session.id,
+          createdAt: new Date().toISOString(),
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        }),
+        {
+          expirationTtl: 30 * 24 * 60 * 60,
+        }
+      );
+
+      console.log(`Subscription stored for user: ${userId} (tier: ${tier})`);
+    }
+  }
+
+  // Fallback: handle charge.succeeded if enabled
+  if (event.type === 'charge.succeeded') {
+    const charge = event.data.object;
+    const userId = charge.metadata?.userId || charge.customer;
+    const tier = charge.metadata?.tier || 'pro';
+
+    if (userId) {
+      await env.SUBSCRIPTIONS.put(
+        `user:${userId}`,
+        JSON.stringify({
+          subscribed: true,
+          tier: tier,
           chargeId: charge.id,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         }),
         {
-          expirationTtl: 30 * 24 * 60 * 60, // 30 days in seconds
+          expirationTtl: 30 * 24 * 60 * 60,
         }
       );
 
-      console.log(`Subscription stored for user: ${userId}`);
+      console.log(`Subscription stored for user: ${userId} (tier: ${tier})`);
     }
   }
 
@@ -206,13 +256,14 @@ async function handleVerify(userId, env, corsHeaders) {
     const data = JSON.parse(subscriptionData);
     const expiresAt = new Date(data.expiresAt);
     const isActive = expiresAt > new Date();
+    const tier = data.tier || (isActive ? 'starter' : 'free');
 
-    return new Response(JSON.stringify({ subscribed: isActive }), {
+    return new Response(JSON.stringify({ subscribed: isActive, tier: tier }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
 
-  return new Response(JSON.stringify({ subscribed: false }), {
+  return new Response(JSON.stringify({ subscribed: false, tier: 'free' }), {
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
   });
 }
