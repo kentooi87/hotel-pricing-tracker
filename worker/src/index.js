@@ -52,6 +52,16 @@ export default {
         return await handleVerify(userId, env, corsHeaders);
       }
 
+      // Route: GET /success - Post-payment success page
+      if (path === '/success' && request.method === 'GET') {
+        return await handleSuccess(url, env);
+      }
+
+      // Route: GET /cancel - Payment cancelled page
+      if (path === '/cancel' && request.method === 'GET') {
+        return handleCancel();
+      }
+
       // Route: GET /status - Health check
       if (path === '/status' && request.method === 'GET') {
         return new Response(JSON.stringify({ status: 'ok' }), {
@@ -81,7 +91,6 @@ async function handleCheckout(request, env, corsHeaders) {
   // Get user ID from request body
   const body = await request.json();
   const userId = body.userId; // Unique ID for this browser/user
-  const returnUrl = body.returnUrl; // Where to redirect after payment
   const requestedTier = body.tier || 'pro';
   const tier = requestedTier === 'starter' ? 'starter' : (requestedTier === 'pro' ? 'pro' : null);
 
@@ -131,8 +140,8 @@ async function handleCheckout(request, env, corsHeaders) {
           quantity: 1,
         },
       ],
-      success_url: returnUrl + '?session_id={CHECKOUT_SESSION_ID}',
-      cancel_url: returnUrl + '?cancelled=true',
+      success_url: new URL(request.url).origin + '/success?session_id={CHECKOUT_SESSION_ID}',
+      cancel_url: new URL(request.url).origin + '/cancel',
       client_reference_id: userId, // Link session to user
       metadata: {
         userId: userId, // Store in metadata too
@@ -266,6 +275,105 @@ async function handleVerify(userId, env, corsHeaders) {
   return new Response(JSON.stringify({ subscribed: false, tier: 'free' }), {
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
   });
+}
+
+/**
+ * Handle GET /success
+ * Verifies the checkout session, stores subscription in KV, shows success page
+ */
+async function handleSuccess(url, env) {
+  const sessionId = url.searchParams.get('session_id');
+  let tier = 'unknown';
+  let stored = false;
+
+  if (sessionId && env.STRIPE_SECRET_KEY) {
+    try {
+      const stripe = new Stripe(env.STRIPE_SECRET_KEY, { apiVersion: '2024-06-20' });
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+      const userId = session.metadata?.userId || session.client_reference_id;
+      tier = session.metadata?.tier || 'pro';
+
+      if (userId && session.payment_status === 'paid') {
+        await env.SUBSCRIPTIONS.put(
+          `user:${userId}`,
+          JSON.stringify({
+            subscribed: true,
+            tier: tier,
+            sessionId: session.id,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          }),
+          { expirationTtl: 30 * 24 * 60 * 60 }
+        );
+        stored = true;
+        console.log(`Success page: stored subscription for ${userId} (tier: ${tier})`);
+      }
+    } catch (e) {
+      console.error('Success page session verify error:', e);
+    }
+  }
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Payment Successful - LyfStay</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0fdf4;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:48px;max-width:480px;text-align:center}
+  .check{width:72px;height:72px;border-radius:50%;background:#22c55e;display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+  .check svg{width:36px;height:36px;color:#fff}
+  h1{font-size:24px;color:#166534;margin-bottom:8px}
+  .tier{display:inline-block;background:#dcfce7;color:#166534;font-weight:600;padding:4px 14px;border-radius:20px;margin:8px 0 16px;font-size:14px;text-transform:capitalize}
+  p{color:#4b5563;line-height:1.6;margin-bottom:16px}
+  .steps{text-align:left;background:#f9fafb;border-radius:10px;padding:16px 20px;margin:16px 0}
+  .steps li{color:#374151;margin:8px 0;font-size:14px}
+  .close-btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:500;margin-top:8px;cursor:pointer;border:none;font-size:15px}
+  .close-btn:hover{background:#1d4ed8}
+</style></head><body>
+<div class="card">
+  <div class="check"><svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+  <h1>Payment Successful!</h1>
+  <div class="tier">${tier} Plan</div>
+  <p>Your subscription is now active. You can close this tab and return to the extension.</p>
+  <ol class="steps">
+    <li>Close this tab</li>
+    <li>Open the <strong>LyfStay</strong> side panel in Chrome</li>
+    <li>Your plan will update automatically within a few seconds</li>
+  </ol>
+  <button class="close-btn" onclick="window.close()">Close This Tab</button>
+</div></body></html>`;
+
+  return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
+}
+
+/**
+ * Handle GET /cancel
+ * Shows a cancellation page
+ */
+function handleCancel() {
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Payment Cancelled - LyfStay</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fefce8;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:48px;max-width:480px;text-align:center}
+  .icon{width:72px;height:72px;border-radius:50%;background:#facc15;display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+  .icon svg{width:36px;height:36px;color:#fff}
+  h1{font-size:24px;color:#854d0e;margin-bottom:12px}
+  p{color:#4b5563;line-height:1.6;margin-bottom:16px}
+  .close-btn{display:inline-block;background:#2563eb;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:500;cursor:pointer;border:none;font-size:15px}
+  .close-btn:hover{background:#1d4ed8}
+</style></head><body>
+<div class="card">
+  <div class="icon"><svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></div>
+  <h1>Payment Cancelled</h1>
+  <p>No worries! You were not charged. You can try upgrading again anytime from the extension.</p>
+  <button class="close-btn" onclick="window.close()">Close This Tab</button>
+</div></body></html>`;
+
+  return new Response(html, { headers: { 'Content-Type': 'text/html;charset=utf-8' } });
 }
 
 /**

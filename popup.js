@@ -13,34 +13,101 @@ function showFeedback(message, isError = false) {
 
 /**
  * Subscription System Integration
- * Checks if user has an active subscription and shows upgrade banner if not
+ * Requires Google login and enforces tier limits
  */
 
-// Get or create a unique user ID for this browser
+const WORKER_URL = 'https://hotel-price-tracker-worker.kent-ooi1987.workers.dev';
+const TIER_LIMITS = {
+	free: { hotels: 3, sites: ['booking'] },
+	starter: { hotels: 10, sites: ['booking', 'agoda'] },
+	pro: { hotels: Number.POSITIVE_INFINITY, sites: ['booking', 'agoda', 'airbnb'] }
+};
+
+let currentTier = 'free';
+let isLoggedIn = false;
+
+// Get or create a unique user ID for this browser (uses Google login when available)
 function getUserId() {
 	return new Promise(resolve => {
-		chrome.storage.local.get(['userId'], result => {
+		chrome.storage.local.get(['authUserId', 'userId'], result => {
+			if (result.authUserId) {
+				resolve(result.authUserId);
+				return;
+			}
 			if (result.userId) {
 				resolve(result.userId);
-			} else {
-				// Generate new user ID
-				const newUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-				chrome.storage.local.set({ userId: newUserId }, () => {
-					resolve(newUserId);
-				});
+				return;
 			}
+			const newUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+			chrome.storage.local.set({ userId: newUserId }, () => {
+				resolve(newUserId);
+			});
 		});
 	});
+}
+
+function getAuthInfo() {
+	return new Promise(resolve => {
+		chrome.storage.local.get(['authUserId', 'authEmail'], result => {
+			resolve({ authUserId: result.authUserId || '', authEmail: result.authEmail || '' });
+		});
+	});
+}
+
+function setMainLocked(locked) {
+	const main = document.getElementById('mainContent');
+	if (!main) return;
+	main.classList.toggle('locked', locked);
+}
+
+function updateLoginUI(loggedIn, email) {
+	const banner = document.getElementById('loginBanner');
+	const loginBtn = document.getElementById('loginBtn');
+	const logoutBtn = document.getElementById('logoutBtn');
+	const status = document.getElementById('loginStatus');
+	if (!banner || !loginBtn || !logoutBtn || !status) return;
+
+	banner.classList.add('show');
+	if (loggedIn) {
+		status.textContent = `Signed in as ${email}`;
+		loginBtn.style.display = 'none';
+		logoutBtn.style.display = 'inline-block';
+		setMainLocked(false);
+	} else {
+		status.textContent = 'Sign in with Google to use the tracker.';
+		loginBtn.style.display = 'inline-block';
+		logoutBtn.style.display = 'none';
+		setMainLocked(true);
+	}
+}
+
+async function fetchEmailFromToken(token) {
+	try {
+		const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+			headers: {
+				Authorization: `Bearer ${token}`
+			}
+		});
+		if (!response.ok) return '';
+		const data = await response.json();
+		return data.email || '';
+	} catch (error) {
+		return '';
+	}
+}
+
+async function ensureLoginRequired() {
+	const auth = await getAuthInfo();
+	isLoggedIn = Boolean(auth.authUserId);
+	updateLoginUI(isLoggedIn, auth.authEmail);
+	return isLoggedIn;
 }
 
 // Verify subscription status with backend
 async function checkSubscriptionStatus() {
 	try {
 		const userId = await getUserId();
-		// Replace YOUR_WORKER_URL with your actual Cloudflare Worker URL
-		const workerUrl = 'https://hotel-price-tracker-worker.kent-ooi1987.workers.dev';
-		
-		const response = await fetch(`${workerUrl}/verify/${userId}`, {
+		const response = await fetch(`${WORKER_URL}/verify/${userId}`, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
@@ -49,49 +116,152 @@ async function checkSubscriptionStatus() {
 		
 		if (!response.ok) {
 			console.log('Subscription check failed, showing upgrade banner');
-			return false;
+			return { subscribed: false, tier: 'free' };
 		}
 		
 		const data = await response.json();
-		return data.subscribed || false;
+		return { subscribed: data.subscribed || false, tier: data.tier || 'free' };
 	} catch (error) {
 		console.error('Error checking subscription:', error);
-		// On error, default to showing upgrade banner
-		return false;
+		return { subscribed: false, tier: 'free' };
 	}
 }
 
 // Show/hide upgrade banner based on subscription status
 async function updateUpgradeBanner() {
 	const banner = document.getElementById('upgradeBanner');
+	const planSelect = document.getElementById('planSelect');
+	const tierStatus = document.getElementById('tierStatus');
 	if (!banner) return;
-	
-	const isSubscribed = await checkSubscriptionStatus();
-	if (isSubscribed) {
+
+	const status = await checkSubscriptionStatus();
+	currentTier = status.tier || 'free';
+	chrome.storage.local.set({ subscriptionTier: currentTier });
+
+	if (currentTier === 'pro') {
 		banner.classList.remove('show');
-	} else {
-		banner.classList.add('show');
+		return;
+	}
+
+	banner.classList.add('show');
+	if (tierStatus) {
+		tierStatus.textContent = currentTier === 'starter'
+			? 'Starter plan active. Upgrade to Pro for Airbnb and unlimited tracking.'
+			: 'Free plan: Booking.com only (max 3 hotels).';
+	}
+	if (planSelect) {
+		planSelect.value = currentTier === 'starter' ? 'pro' : 'starter';
 	}
 }
 
-// Handle upgrade button click
+function isSiteAllowed(site) {
+	const tier = currentTier || 'free';
+	const allowed = TIER_LIMITS[tier]?.sites || ['booking'];
+	return allowed.includes(site);
+}
+
+function getHotelLimit() {
+	const tier = currentTier || 'free';
+	return TIER_LIMITS[tier]?.hotels ?? 3;
+}
+
+function requirePaidForSite(site) {
+	const message = site === 'airbnb'
+		? 'Airbnb tracking is a paid feature. Please upgrade.'
+		: 'Agoda tracking is a paid feature. Please upgrade.';
+	showFeedback(message, true);
+}
+
+function ensureSiteAllowed(site) {
+	if (!isSiteAllowed(site)) {
+		requirePaidForSite(site);
+		return false;
+	}
+	return true;
+}
+
+function requireLoginAction() {
+	if (!isLoggedIn) {
+		showFeedback('Please sign in with Google to continue.', true);
+		ensureLoginRequired();
+		return false;
+	}
+	return true;
+}
+
+// Handle login and upgrade actions
 document.addEventListener('DOMContentLoaded', () => {
 	const upgradeBtn = document.getElementById('upgradeBtn');
+	const loginBtn = document.getElementById('loginBtn');
+	const logoutBtn = document.getElementById('logoutBtn');
+	const planSelect = document.getElementById('planSelect');
+
+	if (loginBtn) {
+		loginBtn.addEventListener('click', () => {
+			chrome.identity.getAuthToken({ interactive: true }, token => {
+				if (chrome.runtime.lastError || !token) {
+					showFeedback('Google sign-in failed. Please try again.', true);
+					return;
+				}
+				chrome.identity.getProfileUserInfo(info => {
+					const email = info.email || '';
+					const handleLogin = (finalEmail) => {
+						if (!finalEmail) {
+							chrome.identity.clearAllCachedAuthTokens(() => {
+								showFeedback('Unable to read Google profile. Try again.', true);
+							});
+							return;
+						}
+						chrome.storage.local.set({ authUserId: finalEmail, authEmail: finalEmail }, async () => {
+							await ensureLoginRequired();
+							await updateUpgradeBanner();
+							loadHotels();
+						});
+					};
+
+					if (email) {
+						handleLogin(email);
+						return;
+					}
+
+					fetchEmailFromToken(token).then(handleLogin);
+				});
+			});
+		});
+	}
+
+	if (logoutBtn) {
+		logoutBtn.addEventListener('click', () => {
+			chrome.identity.clearAllCachedAuthTokens(() => {
+				chrome.storage.local.remove(['authUserId', 'authEmail'], async () => {
+					await ensureLoginRequired();
+					currentTier = 'free';
+					updateUpgradeBanner();
+				});
+			});
+		});
+	}
+
 	if (upgradeBtn) {
 		upgradeBtn.addEventListener('click', async () => {
 			try {
+				const loggedIn = await ensureLoginRequired();
+				if (!loggedIn) {
+					showFeedback('Please sign in with Google first.', true);
+					return;
+				}
+
 				const userId = await getUserId();
-				const workerUrl = 'https://hotel-price-tracker-worker.kent-ooi1987.workers.dev';
-				const returnUrl = chrome.runtime.getURL('popup.html');
-				
-				const response = await fetch(`${workerUrl}/checkout`, {
+				const selectedPlan = planSelect ? planSelect.value : 'pro';
+
+				const response = await fetch(`${WORKER_URL}/checkout`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
 					},
 					body: JSON.stringify({
 						userId: userId,
-						returnUrl: returnUrl
+						tier: selectedPlan
 					})
 				});
 				
@@ -112,10 +282,34 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 });
 
-// Check subscription status on popup load
-updateUpgradeBanner();
-// Check again every 30 seconds
-setInterval(updateUpgradeBanner, 30000);
+// Initialize login + subscription status
+(async () => {
+	await ensureLoginRequired();
+	if (isLoggedIn) {
+		await updateUpgradeBanner();
+	}
+})();
+// Check again every 30 seconds (only if logged in)
+setInterval(async () => {
+	const loggedIn = await ensureLoginRequired();
+	if (loggedIn) {
+		await updateUpgradeBanner();
+	}
+}, 30000);
+
+// Re-check subscription when side panel regains focus (e.g. after Stripe checkout)
+document.addEventListener('visibilitychange', async () => {
+	if (document.visibilityState === 'visible' && isLoggedIn) {
+		console.log('Side panel visible — refreshing subscription status');
+		await updateUpgradeBanner();
+	}
+});
+window.addEventListener('focus', async () => {
+	if (isLoggedIn) {
+		console.log('Side panel focused — refreshing subscription status');
+		await updateUpgradeBanner();
+	}
+});
 
 let activeSite = 'booking';
 let _loadGeneration = 0; // Guard against concurrent loadHotels() race conditions
@@ -141,6 +335,9 @@ function normalizeForComparison(url) {
 }
 
 function setActiveSite(site) {
+	if (!ensureSiteAllowed(site)) {
+		return;
+	}
 	activeSite = site;
 	chrome.storage.local.set({ activeSite: site });
 	// Toggle tab UI
@@ -176,6 +373,7 @@ chrome.storage.local.get({ autoRefresh: 30, checkin: '', checkout: '' }, res => 
 });
 
 document.getElementById('setDateBtn').addEventListener('click', () => {
+	if (!requireLoginAction()) return;
 	const checkin = document.getElementById('checkinInput').value;
 	const checkout = document.getElementById('checkoutInput').value;
 	if (!checkin || !checkout) {
@@ -188,6 +386,7 @@ document.getElementById('setDateBtn').addEventListener('click', () => {
 });
 
 document.getElementById("trackBtn").addEventListener("click", function() {
+	if (!requireLoginAction()) return;
 	// Check dates are set first
 	chrome.storage.local.get({ checkin: '', checkout: '' }, res => {
 		if (!res.checkin || !res.checkout) {
@@ -198,6 +397,7 @@ document.getElementById("trackBtn").addEventListener("click", function() {
 	});
 });
 document.getElementById("refreshBtn").addEventListener("click", () => {
+	if (!requireLoginAction()) return;
 	chrome.storage.local.get({ checkin: '', checkout: '' }, res => {
 		if (!res.checkin || !res.checkout) {
 			showFeedback('Please set check-in and check-out dates first.', true);
@@ -219,11 +419,13 @@ document.getElementById("refreshBtn").addEventListener("click", () => {
 });
 
 document.getElementById("setIntervalBtn").addEventListener("click", function() {
+	if (!requireLoginAction()) return;
 	if (!confirm('Set auto refresh interval?')) return;
 	setAutoRefresh();
 });
 document.getElementById("intervalInput").addEventListener("keydown", function(e) {
 	if (e.key === "Enter") {
+		if (!requireLoginAction()) return;
 		if (!confirm('Set auto refresh interval?')) return;
 		setAutoRefresh();
 	}
@@ -231,6 +433,7 @@ document.getElementById("intervalInput").addEventListener("keydown", function(e)
 
 // Track hotel by URL
 document.getElementById("trackUrlBtn").addEventListener("click", function() {
+	if (!requireLoginAction()) return;
 	const urlInput = document.getElementById("hotelUrlInput");
 	const url = urlInput.value.trim();
 	
@@ -242,10 +445,14 @@ document.getElementById("trackUrlBtn").addEventListener("click", function() {
 	// Validate booking or airbnb URL
 	const isBooking = url.includes('booking.com');
 	const isAirbnb = url.includes('airbnb');
-	if (!isBooking && !isAirbnb) {
-		showFeedback('Please enter a Booking.com or Airbnb URL.', true);
+	const isAgoda = url.includes('agoda');
+	if (!isBooking && !isAirbnb && !isAgoda) {
+		showFeedback('Please enter a Booking.com, Airbnb, or Agoda URL.', true);
 		return;
 	}
+
+	const requestedSite = isAirbnb ? 'airbnb' : (isAgoda ? 'agoda' : 'booking');
+	if (!ensureSiteAllowed(requestedSite)) return;
 	
 	// Check dates are set - required for prices to show
 	chrome.storage.local.get({ checkin: '', checkout: '' }, res => {
@@ -253,46 +460,56 @@ document.getElementById("trackUrlBtn").addEventListener("click", function() {
 			showFeedback('Please set check-in and check-out dates first. Prices won\'t show without dates.', true);
 			return;
 		}
-		
-		let fetchUrl = url;
-		try {
-			const u = new URL(url);
-			// Different sites use different date parameter formats
-			if (isAgoda) {
-				// Agoda: camelCase checkIn/checkOut
-				u.searchParams.set('checkIn', res.checkin);
-				u.searchParams.set('checkOut', res.checkout);
-				// Ensure required Agoda parameters
-				if (!u.searchParams.has('adults')) u.searchParams.set('adults', '2');
-				if (!u.searchParams.has('rooms')) u.searchParams.set('rooms', '1');
-				if (!u.searchParams.has('children')) u.searchParams.set('children', '0');
-			} else if (isAirbnb) {
-				// Airbnb: underscores check_in/check_out
-				u.searchParams.set('check_in', res.checkin);
-				u.searchParams.set('check_out', res.checkout);
-			} else {
-				// Booking.com: lowercase checkin/checkout
-				u.searchParams.set('checkin', res.checkin);
-				u.searchParams.set('checkout', res.checkout);
+
+		chrome.storage.local.get({ hotels: [] }, res2 => {
+			const totalHotels = (res2.hotels || []).length;
+			const limit = getHotelLimit();
+			if (totalHotels >= limit) {
+				showFeedback(`Hotel limit reached (${limit}). Please upgrade to add more.`, true);
+				return;
 			}
-			fetchUrl = u.toString();
-		} catch (e) {}
-		
-		showFeedback('Opening hotel page...');
-		
-		// Open in incognito and listen for data
-		const site = isAirbnb ? 'airbnb' : (fetchUrl.includes('agoda') ? 'agoda' : 'booking');
-		chrome.runtime.sendMessage({ action: 'TRACK_FROM_URL', url: fetchUrl, site: site }, response => {
-			if (response && response.ok) {
-				urlInput.value = '';
-				showFeedback('Hotel page opened. Waiting for data...');
-			}
+
+			let fetchUrl = url;
+			try {
+				const u = new URL(url);
+				// Different sites use different date parameter formats
+				if (isAgoda) {
+					// Agoda: camelCase checkIn/checkOut
+					u.searchParams.set('checkIn', res.checkin);
+					u.searchParams.set('checkOut', res.checkout);
+					// Ensure required Agoda parameters
+					if (!u.searchParams.has('adults')) u.searchParams.set('adults', '2');
+					if (!u.searchParams.has('rooms')) u.searchParams.set('rooms', '1');
+					if (!u.searchParams.has('children')) u.searchParams.set('children', '0');
+				} else if (isAirbnb) {
+					// Airbnb: underscores check_in/check_out
+					u.searchParams.set('check_in', res.checkin);
+					u.searchParams.set('check_out', res.checkout);
+				} else {
+					// Booking.com: lowercase checkin/checkout
+					u.searchParams.set('checkin', res.checkin);
+					u.searchParams.set('checkout', res.checkout);
+				}
+				fetchUrl = u.toString();
+			} catch (e) {}
+
+			showFeedback('Opening hotel page...');
+
+			// Open in incognito and listen for data
+			const site = isAirbnb ? 'airbnb' : (fetchUrl.includes('agoda') ? 'agoda' : 'booking');
+			chrome.runtime.sendMessage({ action: 'TRACK_FROM_URL', url: fetchUrl, site: site }, response => {
+				if (response && response.ok) {
+					urlInput.value = '';
+					showFeedback('Hotel page opened. Waiting for data...');
+				}
+			});
 		});
 	});
 });
 
 // Open all tracked hotels with set dates
 document.getElementById("openAllBtn").addEventListener("click", async function() {
+	if (!requireLoginAction()) return;
 	if (!confirm('Open all tracked hotel pages with set dates?')) return;
 	chrome.storage.local.get({ hotels: [], checkin: '', checkout: '' }, res => {
 		let { hotels, checkin, checkout } = res;
@@ -381,6 +598,13 @@ function trackHotel() {
 
 				const normalizedUrl = normalizeForComparison(data.normalizedUrl || data.url);
 				const currentSite = data.site || activeSite || 'booking';
+				if (!ensureSiteAllowed(currentSite)) return;
+
+				const limit = getHotelLimit();
+				if (hotels.length >= limit) {
+					showFeedback(`Hotel limit reached (${limit}). Please upgrade to add more.`, true);
+					return;
+				}
 			
 			// Check for duplicates
 			const exists = hotels.some(h => {
