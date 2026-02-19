@@ -6,9 +6,15 @@ account_id = "2084d7f7c042f35730c7dfe7c14ded40"
 compatibility_date = "2026-02-17"
 main = "src/index.js"
 
+# Top-level vars used by the workers.dev URL
+vars = { STRIPE_STARTER_PRICE_ID = "price_1T2ZhBITKuqw7ZkZnzsX2nYJ", STRIPE_PRO_PRICE_ID = "price_1T1QiTITKuqw7ZkZvwF5f1b3", STRIPE_PUBLISHABLE_KEY = "pk_test_51T1QZfITKuqw7ZkZ1gIiLZWifIaTEysMQM2oDds248QCxXj9JhIUGlMAthncMeeGmvjGNuYlnTKCBHBuMhwhlKeG00x9aCncM6" }
+kv_namespaces = [
+  { binding = "SUBSCRIPTIONS", id = "89c020947ec349ba983804a6e8d100d0", preview_id = "89c020947ec349ba983804a6e8d100d0" }
+]
+
 # Environment: Development
 [env.development]
-vars = { STRIPE_PRICE_ID = "price_1T1QiTITKuqw7ZkZvwF5f1b3", STRIPE_PUBLISHABLE_KEY = "pk_test_51T1QZfITKuqw7ZkZ1gIiLZWifIaTEysMQM2oDds248QCxXj9JhIUGlMAthncMeeGmvjGNuYlnTKCBHBuMhwhlKeG00x9aCncM6" }
+vars = { STRIPE_STARTER_PRICE_ID = "price_1T2ZhBITKuqw7ZkZnzsX2nYJ", STRIPE_PRO_PRICE_ID = "price_1T1QiTITKuqw7ZkZvwF5f1b3", STRIPE_PUBLISHABLE_KEY = "pk_test_51T1QZfITKuqw7ZkZ1gIiLZWifIaTEysMQM2oDds248QCxXj9JhIUGlMAthncMeeGmvjGNuYlnTKCBHBuMhwhlKeG00x9aCncM6" }
 kv_namespaces = [
   { binding = "SUBSCRIPTIONS", id = "89c020947ec349ba983804a6e8d100d0", preview_id = "89c020947ec349ba983804a6e8d100d0" }
 ]
@@ -16,7 +22,7 @@ kv_namespaces = [
 
 # Environment: Production
 [env.production]
-vars = { STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_LIVE_KEY_HERE" }
+vars = { STRIPE_STARTER_PRICE_ID = "price_live_STARTER", STRIPE_PRO_PRICE_ID = "price_live_PRO", STRIPE_PUBLISHABLE_KEY = "pk_live_YOUR_LIVE_KEY_HERE" }
 kv_namespaces = [
   { binding = "SUBSCRIPTIONS", id = "YOUR_PRODUCTION_KV_ID", preview_id = "YOUR_PROD_PREVIEW_ID" }
 ]
