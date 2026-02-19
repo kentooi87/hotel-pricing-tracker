@@ -1,14 +1,17 @@
 // Show last input value for auto refresh interval and dates
 
-// Helper function to show feedback messages with proper styling
+// Toast notification at top of page
+function showToast(message, isError = false) {
+	const toast = document.getElementById('toast');
+	if (!toast) return;
+	toast.textContent = message;
+	toast.className = isError ? 'show error' : 'show success';
+	setTimeout(() => { toast.className = ''; }, 4000);
+}
+
+// Legacy feedback (hidden by default, keep for fallback)
 function showFeedback(message, isError = false) {
-	const feedback = document.getElementById('feedback');
-	feedback.textContent = message;
-	feedback.className = isError ? 'show error' : 'show success';
-	// Auto-hide after 5 seconds
-	setTimeout(() => {
-		feedback.className = '';
-	}, 5000);
+	showToast(message, isError);
 }
 
 /**
@@ -78,9 +81,11 @@ function updateLoginUI(loggedIn, email) {
 		loginBtn.style.display = 'inline-block';
 		logoutBtn.style.display = 'none';
 		setMainLocked(true);
-		// Hide account card when logged out
+		// Hide account card and profile toggle when logged out
 		const card = document.getElementById('accountCard');
-		if (card) card.classList.remove('show');
+		const toggle = document.getElementById('profileToggle');
+		if (card) card.classList.remove('show', 'expanded');
+		if (toggle) toggle.classList.remove('show');
 	}
 }
 
@@ -184,15 +189,35 @@ function formatDate(iso) {
 
 function updateAccountCard(status) {
 	const card = document.getElementById('accountCard');
-	if (!card) return;
-
-	// Only show when logged in
-	if (!isLoggedIn) { card.classList.remove('show'); return; }
-	card.classList.add('show');
+	const toggle = document.getElementById('profileToggle');
 
 	const tier = status.tier || 'free';
 
-	// Avatar & email
+	// Update profile toggle bar (visible when logged in)
+	if (toggle) {
+		if (!isLoggedIn) {
+			toggle.classList.remove('show');
+		} else {
+			toggle.classList.add('show');
+			getAuthInfo().then(auth => {
+				const email = auth.authEmail || '';
+				const toggleAvatar = document.getElementById('toggleAvatar');
+				const toggleEmail = document.getElementById('toggleEmail');
+				const toggleTier = document.getElementById('toggleTier');
+				if (toggleAvatar) toggleAvatar.textContent = email ? email.charAt(0).toUpperCase() : '?';
+				if (toggleEmail) toggleEmail.textContent = email.split('@')[0] || 'Account';
+				if (toggleTier) {
+					toggleTier.className = 'tier-sm ' + tier;
+					toggleTier.textContent = tier.toUpperCase();
+				}
+			});
+		}
+	}
+
+	// Account card stays hidden until toggle is clicked
+	if (!card) return;
+
+	// Avatar & email (for expanded card)
 	getAuthInfo().then(auth => {
 		const email = auth.authEmail || '';
 		const avatar = document.getElementById('accountAvatar');
@@ -233,6 +258,20 @@ function updateAccountCard(status) {
 		if (details) details.style.display = 'none';
 		if (cancelBtn) cancelBtn.style.display = 'none';
 	}
+
+	// Update auto-refresh controls based on tier
+	updateAutoRefreshControls(tier);
+}
+
+function updateAutoRefreshControls(tier) {
+	const locked = document.getElementById('autoRefreshLocked');
+	const controls = document.getElementById('autoRefreshControls');
+	const badge = document.getElementById('autoRefreshPaidBadge');
+	const isPaid = tier === 'starter' || tier === 'pro';
+
+	if (locked) locked.style.display = isPaid ? 'none' : 'block';
+	if (controls) controls.style.display = isPaid ? 'block' : 'none';
+	if (badge) badge.style.display = isPaid ? 'none' : 'inline';
 }
 
 function isSiteAllowed(site) {
@@ -398,6 +437,77 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		});
 	}
+
+	// Profile toggle: expand/collapse account card
+	const profileToggle = document.getElementById('profileToggle');
+	const accountCard = document.getElementById('accountCard');
+	if (profileToggle && accountCard) {
+		profileToggle.addEventListener('click', () => {
+			const isExpanded = accountCard.classList.contains('expanded');
+			if (isExpanded) {
+				accountCard.classList.remove('expanded');
+				profileToggle.querySelector('.expand-icon').textContent = '▼';
+			} else {
+				accountCard.classList.add('expanded');
+				profileToggle.querySelector('.expand-icon').textContent = '▲';
+			}
+		});
+	}
+
+	// Auto-refresh checkbox: show/hide interval inputs
+	const autoRefreshEnabled = document.getElementById('autoRefreshEnabled');
+	const autoRefreshInputs = document.getElementById('autoRefreshInputs');
+	if (autoRefreshEnabled && autoRefreshInputs) {
+		// Restore saved state
+		chrome.storage.local.get(['autoRefreshEnabled'], result => {
+			autoRefreshEnabled.checked = result.autoRefreshEnabled || false;
+			autoRefreshInputs.style.display = autoRefreshEnabled.checked ? 'flex' : 'none';
+		});
+		autoRefreshEnabled.addEventListener('change', () => {
+			const enabled = autoRefreshEnabled.checked;
+			autoRefreshInputs.style.display = enabled ? 'flex' : 'none';
+			chrome.storage.local.set({ autoRefreshEnabled: enabled });
+			if (!enabled) {
+				// Stop any running auto-refresh
+				chrome.runtime.sendMessage({ action: 'stopAutoRefresh' });
+				showToast('Auto-refresh paused');
+			}
+		});
+	}
+
+	// Track Hotel button: expand track options
+	const trackBtn = document.getElementById('trackBtn');
+	const trackOptions = document.getElementById('trackOptions');
+	if (trackBtn && trackOptions) {
+		trackBtn.addEventListener('click', () => {
+			const isVisible = trackOptions.style.display !== 'none';
+			trackOptions.style.display = isVisible ? 'none' : 'block';
+			trackBtn.textContent = isVisible ? '➕ Track Hotel' : '✖ Close';
+		});
+	}
+
+	// Track Current Page button
+	const trackCurrentBtn = document.getElementById('trackCurrentBtn');
+	if (trackCurrentBtn) {
+		trackCurrentBtn.addEventListener('click', () => {
+			// Hide track options and restore button
+			if (trackOptions) trackOptions.style.display = 'none';
+			if (trackBtn) trackBtn.textContent = '➕ Track Hotel';
+			// Trigger the original track hotel logic (existing global handler will catch this)
+			document.dispatchEvent(new CustomEvent('trackCurrentHotel'));
+		});
+	}
+
+	// Track URL toggle button
+	const trackUrlToggleBtn = document.getElementById('trackUrlToggleBtn');
+	const trackUrlSection = document.getElementById('trackUrlSection');
+	if (trackUrlToggleBtn && trackUrlSection) {
+		trackUrlToggleBtn.addEventListener('click', () => {
+			const isVisible = trackUrlSection.style.display !== 'none';
+			trackUrlSection.style.display = isVisible ? 'none' : 'block';
+			trackUrlToggleBtn.textContent = isVisible ? '🔗 Track by URL' : '✖ Cancel';
+		});
+	}
 });
 
 // Initialize login + subscription status
@@ -503,7 +613,8 @@ document.getElementById('setDateBtn').addEventListener('click', () => {
 	});
 });
 
-document.getElementById("trackBtn").addEventListener("click", function() {
+// Track current hotel (triggered by trackCurrentBtn via custom event)
+document.addEventListener("trackCurrentHotel", function() {
 	if (!requireLoginAction()) return;
 	// Check dates are set first
 	chrome.storage.local.get({ checkin: '', checkout: '' }, res => {
@@ -538,12 +649,32 @@ document.getElementById("refreshBtn").addEventListener("click", () => {
 
 document.getElementById("setIntervalBtn").addEventListener("click", function() {
 	if (!requireLoginAction()) return;
+	// Check if paid tier
+	if (currentTier !== 'starter' && currentTier !== 'pro') {
+		showFeedback('Auto-refresh is a paid feature. Please upgrade.', true);
+		return;
+	}
+	// Check if checkbox is enabled
+	const checkbox = document.getElementById('autoRefreshEnabled');
+	if (!checkbox || !checkbox.checked) {
+		showFeedback('Please enable auto-refresh first.', true);
+		return;
+	}
 	if (!confirm('Set auto refresh interval?')) return;
 	setAutoRefresh();
 });
 document.getElementById("intervalInput").addEventListener("keydown", function(e) {
 	if (e.key === "Enter") {
 		if (!requireLoginAction()) return;
+		if (currentTier !== 'starter' && currentTier !== 'pro') {
+			showFeedback('Auto-refresh is a paid feature. Please upgrade.', true);
+			return;
+		}
+		const checkbox = document.getElementById('autoRefreshEnabled');
+		if (!checkbox || !checkbox.checked) {
+			showFeedback('Please enable auto-refresh first.', true);
+			return;
+		}
 		if (!confirm('Set auto refresh interval?')) return;
 		setAutoRefresh();
 	}
