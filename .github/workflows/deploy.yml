@@ -29,8 +29,20 @@ jobs:
       - name: Install dependencies
         working-directory: ./worker
         run: npm install
+
+      # Step 4: Set Stripe secrets in Cloudflare (development env)
+      - name: Set Stripe secrets
+        working-directory: ./worker
+        run: |
+          printf "%s" "$STRIPE_SECRET_KEY" | npx wrangler secret put STRIPE_SECRET_KEY --env development
+          printf "%s" "$STRIPE_WEBHOOK_SECRET" | npx wrangler secret put STRIPE_WEBHOOK_SECRET --env development
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
       
-      # Step 4: Deploy to Cloudflare
+      # Step 5: Deploy to Cloudflare
       - name: Deploy to Cloudflare Workers
         working-directory: ./worker
         run: npx wrangler deploy --env development
