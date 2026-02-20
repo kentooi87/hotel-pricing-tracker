@@ -66,17 +66,15 @@ function setMainLocked(locked) {
 function updateLoginUI(loggedIn, email) {
 	const banner = document.getElementById('loginBanner');
 	const loginBtn = document.getElementById('loginBtn');
-	const logoutBtn = document.getElementById('logoutBtn');
 	const status = document.getElementById('loginStatus');
 	const profileToggle = document.getElementById('profileToggle');
 	const accountCard = document.getElementById('accountCard');
-	if (!banner || !loginBtn || !logoutBtn || !status) return;
+	if (!banner || !loginBtn || !status) return;
 
 	banner.classList.add('show');
 	if (loggedIn) {
 		status.textContent = `Signed in as ${email}`;
 		loginBtn.style.display = 'none';
-		logoutBtn.style.display = 'inline-block';
 		// Show the collapsible profile toggle/card
 		if (profileToggle) profileToggle.classList.add('show');
 		setMainLocked(false);
@@ -86,7 +84,6 @@ function updateLoginUI(loggedIn, email) {
 	} else {
 		status.textContent = 'Sign in with Google to use the tracker.';
 		loginBtn.style.display = 'inline-block';
-		logoutBtn.style.display = 'none';
 		setMainLocked(true);
 		// Hide account card and profile toggle when logged out
 		if (accountCard) accountCard.classList.remove('show', 'expanded');
@@ -324,7 +321,7 @@ function requireLoginAction() {
 document.addEventListener('DOMContentLoaded', () => {
 	const upgradeBtn = document.getElementById('upgradeBtn');
 	const loginBtn = document.getElementById('loginBtn');
-	const logoutBtn = document.getElementById('logoutBtn');
+	const logoutBtn = document.getElementById('logoutBtn');  // Now in account card
 	const planSelect = document.getElementById('planSelect');
 
 	if (loginBtn) {
@@ -970,9 +967,16 @@ function removeHotel(url, site) {
 
 
 function updateCountdown() {
-	chrome.storage.local.get(['nextBackgroundFetch'], res => {
+	chrome.storage.local.get(['nextBackgroundFetch', 'autoRefreshEnabled'], res => {
 		const countdownEl = document.getElementById('countdown');
 		if (!countdownEl) return;
+		// Only show countdown if auto-refresh is enabled AND user is paid tier
+		const autoRefreshEnabled = res.autoRefreshEnabled || false;
+		const isPaidTier = currentTier === 'starter' || currentTier === 'pro';
+		if (!autoRefreshEnabled || !isPaidTier) {
+			countdownEl.textContent = '';
+			return;
+		}
 		const next = res.nextBackgroundFetch;
 		if (!next) {
 			countdownEl.textContent = '';
