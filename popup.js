@@ -68,6 +68,8 @@ function updateLoginUI(loggedIn, email) {
 	const loginBtn = document.getElementById('loginBtn');
 	const logoutBtn = document.getElementById('logoutBtn');
 	const status = document.getElementById('loginStatus');
+	const profileToggle = document.getElementById('profileToggle');
+	const accountCard = document.getElementById('accountCard');
 	if (!banner || !loginBtn || !logoutBtn || !status) return;
 
 	banner.classList.add('show');
@@ -75,17 +77,26 @@ function updateLoginUI(loggedIn, email) {
 		status.textContent = `Signed in as ${email}`;
 		loginBtn.style.display = 'none';
 		logoutBtn.style.display = 'inline-block';
+		// Show the collapsible profile toggle/card
+		if (profileToggle) profileToggle.classList.add('show');
 		setMainLocked(false);
+		// Re-enable auto-refresh checkbox
+		const autoRefreshCheckbox = document.getElementById('autoRefreshEnabled');
+		if (autoRefreshCheckbox) autoRefreshCheckbox.disabled = false;
 	} else {
 		status.textContent = 'Sign in with Google to use the tracker.';
 		loginBtn.style.display = 'inline-block';
 		logoutBtn.style.display = 'none';
 		setMainLocked(true);
 		// Hide account card and profile toggle when logged out
-		const card = document.getElementById('accountCard');
-		const toggle = document.getElementById('profileToggle');
-		if (card) card.classList.remove('show', 'expanded');
-		if (toggle) toggle.classList.remove('show');
+		if (accountCard) accountCard.classList.remove('show', 'expanded');
+		if (profileToggle) profileToggle.classList.remove('show');
+		// Disable auto-refresh
+		const autoRefreshCheckbox = document.getElementById('autoRefreshEnabled');
+		if (autoRefreshCheckbox) {
+			autoRefreshCheckbox.checked = false;
+			autoRefreshCheckbox.disabled = true;
+		}
 	}
 }
 
@@ -354,6 +365,18 @@ document.addEventListener('DOMContentLoaded', () => {
 		logoutBtn.addEventListener('click', () => {
 			chrome.identity.clearAllCachedAuthTokens(() => {
 				chrome.storage.local.remove(['authUserId', 'authEmail'], async () => {
+					// Stop auto-refresh when logging out
+					chrome.runtime.sendMessage({ action: 'stopAutoRefresh' });
+					// Disable auto-refresh checkbox
+					const autoRefreshCheckbox = document.getElementById('autoRefreshEnabled');
+					if (autoRefreshCheckbox) {
+						autoRefreshCheckbox.checked = false;
+						autoRefreshCheckbox.disabled = true;
+					}
+					const autoRefreshInputs = document.getElementById('autoRefreshInputs');
+					if (autoRefreshInputs) autoRefreshInputs.style.display = 'none';
+					// Clear stored auto-refresh settings
+					chrome.storage.local.set({ autoRefreshEnabled: false });
 					await ensureLoginRequired();
 					currentTier = 'free';
 					updateUpgradeBanner();
@@ -458,12 +481,18 @@ document.addEventListener('DOMContentLoaded', () => {
 	const autoRefreshEnabled = document.getElementById('autoRefreshEnabled');
 	const autoRefreshInputs = document.getElementById('autoRefreshInputs');
 	if (autoRefreshEnabled && autoRefreshInputs) {
-		// Restore saved state
+		// Restore saved state and disable if not logged in
 		chrome.storage.local.get(['autoRefreshEnabled'], result => {
 			autoRefreshEnabled.checked = result.autoRefreshEnabled || false;
-			autoRefreshInputs.style.display = autoRefreshEnabled.checked ? 'flex' : 'none';
+			autoRefreshInputs.style.display = autoRefreshEnabled.checked && isLoggedIn ? 'flex' : 'none';
+			autoRefreshEnabled.disabled = !isLoggedIn;  // Disable if not logged in
 		});
 		autoRefreshEnabled.addEventListener('change', () => {
+			if (!isLoggedIn) {
+				autoRefreshEnabled.checked = false;
+				showToast('Please sign in to use auto-refresh');
+				return;
+			}
 			const enabled = autoRefreshEnabled.checked;
 			autoRefreshInputs.style.display = enabled ? 'flex' : 'none';
 			chrome.storage.local.set({ autoRefreshEnabled: enabled });
@@ -551,11 +580,13 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 });
 
-// Initialize login + subscription status
+// Initialize login + subscription status, then site loading
 (async () => {
 	await ensureLoginRequired();
 	if (isLoggedIn) {
 		await updateUpgradeBanner();
+		// Initialize site selection AFTER tier is loaded
+		initializeSiteLoading();
 	}
 })();
 // Check again every 30 seconds (only if logged in)
@@ -617,14 +648,18 @@ function setActiveSite(site) {
 	loadPriceChangeNotifications();
 }
 
-chrome.storage.local.get({ activeSite: 'booking' }, res => {
-	activeSite = res.activeSite || 'booking';
-	setActiveSite(activeSite);
-	// Initialize tab events
-	document.querySelectorAll('.site-tab').forEach(tab => {
-		tab.addEventListener('click', () => setActiveSite(tab.getAttribute('data-site')));
+// Initialize site loading ONLY after subscription tier is loaded and user is logged in
+function initializeSiteLoading() {
+	if (!isLoggedIn) return;
+	chrome.storage.local.get({ activeSite: 'booking' }, res => {
+		activeSite = res.activeSite || 'booking';
+		setActiveSite(activeSite);
+		// Initialize tab events
+		document.querySelectorAll('.site-tab').forEach(tab => {
+			tab.addEventListener('click', () => setActiveSite(tab.getAttribute('data-site')));
+		});
 	});
-});
+}
 
 chrome.storage.local.get({ autoRefresh: 30, checkin: '', checkout: '' }, res => {
     const input = document.getElementById('intervalInput');
