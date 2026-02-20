@@ -1,5 +1,31 @@
 # Changelog
 
+## [2.0.0] - 2026-02-20 - Major UI Improvements & Bug Fixes
+
+### Features
+- ✨ **Collapsible Profile Card** - Sign out button now integrated into expanded profile card
+- ✨ **Collapsed Upgrade Card** - Upgrade to premium card collapses by default for cleaner interface
+- ✨ **Help & Guide Modal** - New help button with 6-section feature guide, highlighting paid features
+- ✨ **Expandable Room Price Lists** - Long room lists now show first room only, with button to expand all
+
+### Bug Fixes
+- 🐛 **CRITICAL: Fixed Airbnb/Agoda redirect on sidepanel reopen**
+  - Issue: When closing and reopening sidepanel, subscription tier wasn't loaded yet before site selection
+  - Pro users got redirected to Booking.com with "paid feature" notification despite being eligible
+  - Solution: Deferred site loading until after subscription tier is fetched from backend
+- 🐛 **Fixed auto-refresh timer showing for free/unchecked users**
+  - Timer now only displays when auto-refresh is enabled AND user is on paid tier
+  - Free tier and unpaid users see no countdown timer
+- 🐛 **Fixed extension features not pausing when logged out**
+  - Auto-refresh checkbox disabled when not logged in
+  - All tracking features properly locked for unsigned users
+
+### Improvements
+- 🎨 **Cleaner login flow** - Login prompt minimal, account card appears on demand
+- 🔒 **Better state management** - Features properly respect login and tier status
+- 📱 **Improved mobile responsiveness** - Profile card and modals better on smaller screens
+
+### Technical Details
 ## [3.3.7] - 2026-02-15 - Critical Airbnb Fix & Agoda Price Filtering
 
 ### Bug Fixes

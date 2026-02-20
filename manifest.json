@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Hotel Price Tracker (Booking, Airbnb, Agoda)",
-  "version": "3.5.0",
+  "name": "LyfStay Hotel Price Tracker",
+  "version": "2.0.0",
   "description": "Track competitor hotel prices on Booking.com, Airbnb, and Agoda",
   "incognito": "spanning",
   "permissions": [
@@ -12,8 +12,13 @@
     "notifications",
     "alarms",
     "sidePanel",
-    "identity"
+    "identity",
+    "identity.email"
   ],
+  "oauth2": {
+    "client_id": "378826095307-shcd47ks91dnsth1lpdo5ssmrn7tjjse.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
   "host_permissions": [
     "https://www.booking.com/*",
     "https://*.booking.com/*",
