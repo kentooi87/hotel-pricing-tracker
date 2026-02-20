@@ -508,6 +508,47 @@ document.addEventListener('DOMContentLoaded', () => {
 			trackUrlToggleBtn.textContent = isVisible ? '🔗 Track by URL' : '✖ Cancel';
 		});
 	}
+
+	// Help button: open help modal
+	const helpBtn = document.getElementById('helpBtn');
+	const helpModal = document.getElementById('helpModal');
+	const helpModalClose = document.getElementById('helpModalClose');
+	if (helpBtn && helpModal) {
+		helpBtn.addEventListener('click', () => {
+			helpModal.classList.add('show');
+		});
+	}
+	if (helpModalClose && helpModal) {
+		helpModalClose.addEventListener('click', () => {
+			helpModal.classList.remove('show');
+		});
+	}
+	// Close modal when clicking outside
+	if (helpModal) {
+		helpModal.addEventListener('click', (e) => {
+			if (e.target === helpModal) {
+				helpModal.classList.remove('show');
+			}
+		});
+	}
+
+	// Upgrade banner: toggle collapse/expand
+	const upgradeBanner = document.getElementById('upgradeBanner');
+	if (upgradeBanner) {
+		const upgradeToggle = upgradeBanner.querySelector('.upgrade-toggle');
+		if (upgradeToggle) {
+			upgradeToggle.addEventListener('click', () => {
+				const isCollapsed = upgradeBanner.classList.contains('collapsed');
+				if (isCollapsed) {
+					upgradeBanner.classList.remove('collapsed');
+					upgradeBanner.classList.add('expanded');
+				} else {
+					upgradeBanner.classList.remove('expanded');
+					upgradeBanner.classList.add('collapsed');
+				}
+			});
+		}
+	}
 });
 
 // Initialize login + subscription status
@@ -982,8 +1023,12 @@ function loadHotels() {
 					const prevPriceMap = {};
 					prevRooms.forEach((r, i) => { prevPriceMap[r.room + '|' + i] = r.price; });
 
+					// Generate all rooms in table, but only first is visible by default
+					const hasMultipleRooms = rooms.length > 1;
+					const tableClass = hasMultipleRooms ? 'room-table collapsed' : 'room-table';
+
 					roomsHtml = `
-						<table class="room-table">
+						<table class="${tableClass}" data-total-rooms="${rooms.length}">
 							<thead>
 								<tr><th style="width:35%">Room Type</th><th style="width:30%">Condition</th><th style="width:17%">Price</th><th style="width:10%">Chg</th><th style="width:8%"></th></tr>
 							</thead>
@@ -1014,7 +1059,7 @@ function loadHotels() {
 									const needsExpand = roomName.length > 20 || conditionHtml.length > 15;
 									const collapsedClass = needsExpand ? 'collapsed' : '';
 									const expandBtn = needsExpand ? `<span class="expand-btn" data-row="${i}">▼</span>` : '';
-									return `<tr data-row="${i}">
+									return `<tr data-row="${i}" class="${i > 0 ? 'extra-room' : ''}">
 										<td class="room-cell"><span class="cell-text ${collapsedClass}" title="${roomName.replace(/"/g, '&quot;')}">${roomName}</span></td>
 										<td class="cond-cell"><span class="cell-text ${collapsedClass} ${condClass}" title="${conditionHtml}">${conditionHtml}</span></td>
 										<td class="price">RM ${String(r.price).replace(/^(RM|MYR)\s*/i, '')}</td>
@@ -1024,6 +1069,7 @@ function loadHotels() {
 								}).join('')}
 							</tbody>
 						</table>
+						${hasMultipleRooms ? `<button class="expand-all-rooms" data-total="${rooms.length}">+ Show all ${rooms.length} room options</button>` : ''}
 					`;
 				}
 
@@ -1068,6 +1114,27 @@ function loadHotels() {
 							}
 						});
 						e.target.textContent = isCollapsed ? '▲' : '▼';
+					}
+				});
+			});
+
+			// Expand all rooms button: toggle showing all price options for a hotel
+			document.querySelectorAll(".expand-all-rooms").forEach(btn => {
+				btn.addEventListener("click", e => {
+					const table = e.target.previousElementSibling;
+					if (!table || !table.classList.contains('room-table')) return;
+					
+					const totalRooms = parseInt(table.getAttribute('data-total-rooms')) || 0;
+					const isCollapsed = table.classList.contains('collapsed');
+					
+					if (isCollapsed) {
+						// Expand - show all rows
+						table.classList.remove('collapsed');
+						e.target.textContent = `- Hide extra options`;
+					} else {
+						// Collapse - hide extra rows
+						table.classList.add('collapsed');
+						e.target.textContent = `+ Show all ${totalRooms} room options`;
 					}
 				});
 			});

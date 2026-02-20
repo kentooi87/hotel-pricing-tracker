@@ -441,25 +441,76 @@
     .upgrade-banner {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 15px;
+      padding: 0;
       text-align: center;
       display: none;
       margin: 10px 15px 0;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(102,126,234,0.3);
+      overflow: hidden;
+      transition: all 0.3s ease;
     }
     .upgrade-banner.show {
       display: block;
     }
-    .upgrade-banner h3 {
+    .upgrade-banner.collapsed {
+      padding: 12px 15px;
+    }
+    .upgrade-banner.collapsed .upgrade-content {
+      display: none;
+    }
+    .upgrade-banner.collapsed .upgrade-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      width: 100%;
+    }
+    .upgrade-banner.expanded {
+      padding: 15px;
+    }
+    .upgrade-banner.expanded .upgrade-toggle {
+      display: none;
+    }
+    .upgrade-banner.expanded .upgrade-content {
+      display: block;
+    }
+    .upgrade-toggle {
+      display: none;
+      font-size: 14px;
+      font-weight: 600;
+      user-select: none;
+    }
+    .upgrade-toggle .toggle-arrow {
+      font-size: 12px;
+      transition: transform 0.2s ease;
+    }
+    .upgrade-banner.collapsed .upgrade-toggle .toggle-arrow {
+      transform: rotate(180deg);
+    }
+    .upgrade-content {
+      display: block;
+    }
+    .upgrade-content h3 {
       margin: 0 0 8px 0;
       font-size: 14px;
       font-weight: 600;
     }
-    .upgrade-banner p {
+    .upgrade-content p {
       margin: 0 0 12px 0;
       font-size: 12px;
       opacity: 0.95;
+    }
+    .plan-select {
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.95);
+      color: #333;
+      font-size: 12px;
+      cursor: pointer;
     }
     .upgrade-banner .btn-upgrade {
       background: white;
@@ -471,6 +522,7 @@
       cursor: pointer;
       font-size: 13px;
       transition: all 0.2s ease;
+      width: 100%;
     }
     .upgrade-banner .btn-upgrade:hover {
       transform: translateY(-2px);
@@ -659,6 +711,163 @@
     .profile-toggle .tier-sm.pro { background:#fef3c7; color:#92400e; }
     .profile-toggle .expand-icon { font-size: 10px; color: #888; margin-left: 4px; }
     .account-card.expanded { display: block; }
+    /* Help button styling */
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .header-title {
+      flex: 1;
+    }
+    .header-title h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .header-title .subtitle {
+      font-size: 11px;
+      opacity: 0.85;
+      margin-top: 4px;
+    }
+    .help-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      font-weight: 600;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    .help-btn:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.05);
+    }
+    /* Help modal styling */
+    .help-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 10000;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .help-modal.show {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .help-modal-content {
+      background: white;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .help-modal-header {
+      background: linear-gradient(135deg, #003580 0%, #0057b8 100%);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 12px 12px 0 0;
+    }
+    .help-modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .help-modal-close {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .help-modal-close:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .help-modal-body {
+      padding: 20px;
+    }
+    .help-section {
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 15px;
+    }
+    .help-section:last-child {
+      border-bottom: none;
+    }
+    .help-section h3 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #003580;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .help-section .paid-badge {
+      background: #667eea;
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: auto;
+    }
+    .help-section p {
+      margin: 0;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.5;
+    }
+    /* Price table expansion */
+    .expand-all-rooms {
+      display: block;
+      font-size: 11px;
+      color: #667eea;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 8px;
+      margin-left: 0;
+      font-weight: 600;
+      padding: 0;
+      border: none;
+      background: none;
+    }
+    .expand-all-rooms:hover {
+      color: #003580;
+    }
+    /* Hide extra room rows by default */
+    .room-table.collapsed tbody tr.extra-room {
+      display: none;
+    }
+    .room-table:not(.collapsed) ~ .expand-all-rooms {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -667,8 +876,13 @@
   <div id="toast"></div>
 
   <div class="header">
-    <h2>🏨 LyfStay Hotel Price Tracker</h2>
-    <div class="subtitle">Track & compare hotel prices</div>
+    <div class="header-content">
+      <div class="header-title">
+        <h2>🏨 LyfStay Hotel Price Tracker</h2>
+        <div class="subtitle">Track & compare hotel prices</div>
+      </div>
+      <button class="help-btn" id="helpBtn" title="Help & Guide">?</button>
+    </div>
   </div>
 
   <div id="loginBanner" class="login-banner">
@@ -704,14 +918,20 @@
     <button class="btn-cancel-sub" id="cancelSubBtn" style="display:none;">Cancel Subscription</button>
   </div>
 
-  <div id="upgradeBanner" class="upgrade-banner">
-    <h3>🚀 Unlock Premium Features</h3>
-    <p id="tierStatus">Choose your plan to unlock more OTAs and hotel slots.</p>
-    <select class="plan-select" id="planSelect">
-      <option value="starter">Starter: Booking + Agoda (10 hotels) - $4.99/mo</option>
-      <option value="pro">Pro: All OTAs (Unlimited) - $9.99/mo</option>
-    </select>
-    <button class="btn-upgrade" id="upgradeBtn">Upgrade Now</button>
+  <div id="upgradeBanner" class="upgrade-banner collapsed">
+    <div class="upgrade-toggle">
+      <span>🚀 Upgrade to Premium</span>
+      <span class="toggle-arrow">▲</span>
+    </div>
+    <div class="upgrade-content">
+      <h3>🚀 Unlock Premium Features</h3>
+      <p id="tierStatus">Choose your plan to unlock more OTAs and hotel slots.</p>
+      <select class="plan-select" id="planSelect">
+        <option value="starter">Starter: Booking + Agoda (10 hotels) - $4.99/mo</option>
+        <option value="pro">Pro: All OTAs (Unlimited) - $9.99/mo</option>
+      </select>
+      <button class="btn-upgrade" id="upgradeBtn">Upgrade Now</button>
+    </div>
   </div>
 
   <div class="main-content" id="mainContent">
@@ -788,6 +1008,51 @@
       📋 Tracked Hotels <span class="count" id="hotelCount">0</span>
     </div>
     <div id="list"></div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="help-modal">
+    <div class="help-modal-content">
+      <div class="help-modal-header">
+        <h2>Help & Feature Guide</h2>
+        <button class="help-modal-close" id="helpModalClose">&times;</button>
+      </div>
+      <div class="help-modal-body">
+        <div class="help-section">
+          <h3>🗓️ Travel Dates</h3>
+          <p>Set your check-in and check-out dates. These dates will be used when opening hotel pages to show prices for your specific travel dates.</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>⏰ Auto Refresh <span class="paid-badge">Paid Feature</span></h3>
+          <p>Automatically refresh hotel prices at your set interval (in minutes). Available on Starter ($4.99/mo) and Pro ($9.99/mo) plans. Free tier only supports manual refresh.</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>⚡ Quick Actions</h3>
+          <p><strong>Refresh:</strong> Manually update all tracked hotels now.</p>
+          <p style="margin-top: 8px;"><strong>Track Hotel:</strong> Track the current hotel page you're viewing.</p>
+          <p style="margin-top: 8px;"><strong>Track by URL:</strong> Paste a hotel URL to track prices without visiting the page.</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>📍 Tracking Limits</h3>
+          <p><strong>Free:</strong> Booking.com only, max 3 hotels</p>
+          <p style="margin-top: 6px;"><strong>Starter ($4.99/mo):</strong> Booking.com + Agoda, max 10 hotels</p>
+          <p style="margin-top: 6px;"><strong>Pro ($9.99/mo):</strong> All OTAs (Booking, Agoda, Airbnb), unlimited hotels</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>💳 Subscription Management</h3>
+          <p>View your current plan, billing details, and next charge date in your account profile. Click the profile toggle at the top to expand your account details. You can cancel anytime.</p>
+        </div>
+        
+        <div class="help-section">
+          <h3>📊 Price Tracking</h3>
+          <p>For each hotel, we show the room types and their prices. Price changes are highlighted with ↑ (increase) or ↓ (decrease) indicators. Click the expand button to see all room types for a hotel.</p>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>
